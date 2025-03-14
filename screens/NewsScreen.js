@@ -4,7 +4,7 @@ import { View, Text, StyleSheet } from "react-native";
 const NewsScreen = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Tela de Notícias</Text>
+      <Text style={styles.text}>Bem vindo à Tela de Notícias!</Text>
     </View>
   );
 };

@@ -4,7 +4,7 @@ import { View, Text, StyleSheet } from "react-native";
 const TaskScreen = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Tela de Tarefas</Text>
+      <Text style={styles.text}>Bem vindo à Tela de Tarefas!</Text>
     </View>
   );
 };

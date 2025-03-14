@@ -4,7 +4,7 @@ import { View, Text, StyleSheet } from "react-native";
 const CarbonCalculationScreen = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Tela de Cálculo de Carbono</Text>
+      <Text style={styles.text}>Bem vindo à Tela de Cálculo de Carbono!</Text>
     </View>
   );
 };

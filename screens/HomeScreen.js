@@ -12,10 +12,10 @@ const menuItems = [
 const HomeScreen = () => {
   const navigation = useNavigation();
   const menuItems = [
-    { title: "Perfil", screen: "Profile", color: "#0078D7" },
-    { title: "Tasks", screen: "Tasks", color: "#00A300" },
-    { title: "Notícias", screen: "News", color: "#F7630C" },
-    { title: "Cálculo Carbono", screen: "CarbonCalculation", color: "#B91D47" },
+    { title: "Perfil", screen: "Profile", color: "#34C759" },
+    { title: "Tasks", screen: "Tasks", color: "#34C759" },
+    { title: "Notícias", screen: "News", color: "#34C759" },
+    { title: "Cálculo Carbono", screen: "CarbonCalculation", color: "#34C759" },
   ];
   return (
     <View style={styles.container}>
