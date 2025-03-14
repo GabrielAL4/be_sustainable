@@ -1,20 +1,22 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-const LoginScreen = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const LoginScreen = ({ navigation }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleLogin = () => {
+    navigation.navigate("Home"); // Navega para a HomeScreen
+  };
 
   return (
     <View style={styles.container}>
-      {/* Botão de Configuração */}
       <TouchableOpacity style={styles.settingsButton}>
         <Ionicons name="settings-outline" size={24} color="black" />
       </TouchableOpacity>
 
-      {/* Campo de E-mail */}
       <TextInput
         style={styles.input}
         placeholder="E-mail"
@@ -23,7 +25,6 @@ const LoginScreen = () => {
         keyboardType="email-address"
       />
 
-      {/* Campo de Senha Corrigido */}
       <View style={styles.passwordContainer}>
         <TextInput
           style={styles.passwordInput}
@@ -33,12 +34,11 @@ const LoginScreen = () => {
           secureTextEntry={!showPassword}
         />
         <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-          <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={24} color="black" />
+          <Ionicons name={showPassword ? "eye" : "eye-off"} size={24} color="black" />
         </TouchableOpacity>
       </View>
 
-      {/* Botão de Login */}
-      <TouchableOpacity style={styles.loginButton}>
+      <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
         <Text style={styles.loginButtonText}>Login</Text>
       </TouchableOpacity>
     </View>
@@ -48,13 +48,13 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   settingsButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 40,
     right: 20,
     padding: 10,
@@ -66,40 +66,40 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     marginBottom: 10,
-    backgroundColor: 'white', // Garante uma boa aparência
+    backgroundColor: "white",
   },
   passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     width: 278,
     height: 44,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 10,
     marginBottom: 10,
-    backgroundColor: 'white',
-    justifyContent: 'space-between', // Mantém o ícone no canto direito
+    backgroundColor: "white",
+    justifyContent: "space-between",
   },
   passwordInput: {
-    flex: 1, // Faz o campo ocupar todo o espaço disponível
-    height: '100%',
+    flex: 1,
+    height: "100%",
   },
   eyeIcon: {
-    padding: 8, // Ajusta o espaçamento do ícone
+    padding: 8,
   },
   loginButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: "#34C759",
     width: 278,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8, // Removido o valor incorreto
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 8,
     marginTop: 20,
   },
   loginButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
 
