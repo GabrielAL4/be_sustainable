@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 const LoginScreen = ({ navigation }) => {
@@ -16,6 +16,9 @@ const LoginScreen = ({ navigation }) => {
       <TouchableOpacity style={styles.settingsButton}>
         <Ionicons name="settings-outline" size={24} color="black" />
       </TouchableOpacity>
+
+      {/* Corrigi a importação da imagem */}
+      <Image source={require("../assets/logo.png")} style={styles.logo} />
 
       <TextInput
         style={styles.input}
@@ -58,6 +61,11 @@ const styles = StyleSheet.create({
     top: 40,
     right: 20,
     padding: 10,
+  },
+  logo: {
+    width: 150, // Defina o tamanho da imagem
+    height: 150,
+    marginBottom: 20, // Espaço entre a imagem e o input
   },
   input: {
     width: 278,
