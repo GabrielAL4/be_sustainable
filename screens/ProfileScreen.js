@@ -1,10 +1,13 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
 
 const ProfileScreen = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Bem vindo à Tela de Perfil!</Text>
+      <Text style={styles.text}>Perfil</Text>
+      <Image source={require("../assets/logo-white.png")} style={styles.logo} />
+      <Text>Level Bar</Text>
+
     </View>
   );
 };
@@ -12,7 +15,7 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "top",
     alignItems: "center",
   },
   text: {
