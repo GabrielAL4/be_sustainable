@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   selectedOption: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#28A745',
   },
   optionText: {
     color: '#000',

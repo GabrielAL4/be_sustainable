@@ -1,10 +1,14 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { WebView } from 'react-native-webview';
 
 const NewsScreen = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Bem vindo à Tela de Notícias!</Text>
+      <WebView
+        source={{ uri: 'https://www.sosma.org.br/noticias/edital-rppns-medio-tiete' }}
+        style={{ flex: 1 }}
+      />
     </View>
   );
 };
@@ -12,12 +16,6 @@ const NewsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  text: {
-    fontSize: 18,
-    fontWeight: "bold",
   },
 });
 
