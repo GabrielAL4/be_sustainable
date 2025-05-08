@@ -28,12 +28,10 @@ const ProfileScreen = ({ navigation }) => {
     }, [])
   );
 
-  // Simular ganho de XP ao completar uma tarefa
   const completeTask = async () => {
     let newXp = xp + XP_PER_TASK;
     let newLevel = level;
 
-    // Se o XP acumulado atingir o limite, sobe de nível
     if (newXp >= XP_TO_LEVEL_UP) {
       newXp -= XP_TO_LEVEL_UP;
       newLevel += 1;
@@ -56,21 +54,17 @@ const ProfileScreen = ({ navigation }) => {
       <Text style={styles.title}>Perfil</Text>
       <Image source={require("../assets/logo-white.png")} style={styles.logo} />
 
-      {/* Exibir nível */}
       <Text style={styles.levelText}>Nível: {level}</Text>
 
-      {/* Barra de XP */}
       <View style={styles.xpBarContainer}>
         <View style={[styles.xpBar, { width: `${(xp / XP_TO_LEVEL_UP) * 100}%` }]} />
       </View>
       <Text style={styles.xpText}>{xp} / {XP_TO_LEVEL_UP} XP</Text>
 
-      {/* Botão para simular completar uma task */}
       <TouchableOpacity style={styles.completeTaskButton} onPress={completeTask}>
         <Text style={styles.completeTaskButtonText}>Completar Tarefa (+{XP_PER_TASK} XP)</Text>
       </TouchableOpacity>
 
-      {/* Botão para voltar à tela inicial */}
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate("Home")}>
         <Text style={styles.backButtonText}>Voltar ao Home</Text>
       </TouchableOpacity>

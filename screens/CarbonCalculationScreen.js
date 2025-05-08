@@ -10,13 +10,11 @@ export default function CarbonCalculatorScreen() {
   const calcularEmissao = () => {
     let co2 = 0;
 
-    // Emissões por tipo de veículo por mês (em kg CO2)
     if (vehicleType === 'carro') co2 += 250;
     else if (vehicleType === 'moto') co2 += 100;
 
     co2 += parseFloat(numComputers || 0) * 0.0136 * 30;
 
-    // Geladeira (baseado em capacidade estimada)
     if (fridgeSize === 'pequena') co2 += 20;
     else if (fridgeSize === 'media') co2 += 30;
     else if (fridgeSize === 'grande') co2 += 50;
@@ -26,7 +24,7 @@ export default function CarbonCalculatorScreen() {
 
   const calcularMudas = () => {
     if (!totalCO2) return 0;
-    return Math.ceil(totalCO2 / 15); // 1 muda compensa ~15kg CO2 por mês
+    return Math.ceil(totalCO2 / 15);
   };
 
   return (

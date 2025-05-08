@@ -17,7 +17,6 @@ const LoginScreen = ({ navigation }) => {
         <Ionicons name="settings-outline" size={24} color="black" />
       </TouchableOpacity>
 
-      {/* Corrigi a importação da imagem */}
       <Image source={require("../assets/logo.png")} style={styles.logo} />
 
       <TextInput
@@ -63,9 +62,9 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   logo: {
-    width: 150, // Defina o tamanho da imagem
+    width: 150,
     height: 150,
-    marginBottom: 20, // Espaço entre a imagem e o input
+    marginBottom: 20,
   },
   input: {
     width: 278,
