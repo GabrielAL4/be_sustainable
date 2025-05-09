@@ -13,7 +13,10 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.settingsButton}>
+      <TouchableOpacity
+        style={styles.settingsButton}
+        onPress={() => navigation.navigate("AdminLogin")}
+      >
         <Ionicons name="settings-outline" size={24} color="black" />
       </TouchableOpacity>
 

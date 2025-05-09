@@ -1,31 +1,63 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Asset } from "expo-asset";
+import * as FileSystem from "expo-file-system";
+import Papa from "papaparse";
 
-const TaskScreen = ({ navigation }) => {
+const TaskScreen = () => {
   const [xp, setXp] = useState(0);
   const [level, setLevel] = useState(1);
-  const [tasks, setTasks] = useState([
-    { id: "1", title: "Reciclar plástico" },
-    { id: "2", title: "Usar transporte público" },
-    { id: "3", title: "Economizar água" },
-    { id: "4", title: "Desligar luzes desnecessárias" },
-  ]);
+  const [tasks, setTasks] = useState([]);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const savedXp = await AsyncStorage.getItem("xp");
-        const savedLevel = await AsyncStorage.getItem("level");
-
-        setXp(savedXp ? parseInt(savedXp) : 0);
-        setLevel(savedLevel ? parseInt(savedLevel) : 1);
-      } catch (error) {
-        console.log("Erro ao carregar XP e nível:", error);
-      }
-    };
     loadData();
+    loadTasksFromCSV();
   }, []);
+
+  const loadData = async () => {
+    try {
+      const savedXp = await AsyncStorage.getItem("xp");
+      const savedLevel = await AsyncStorage.getItem("level");
+
+      setXp(savedXp ? parseInt(savedXp) : 0);
+      setLevel(savedLevel ? parseInt(savedLevel) : 1);
+    } catch (error) {
+      console.log("Erro ao carregar XP e nível:", error);
+    }
+  };
+
+  const loadTasksFromCSV = async () => {
+    try {
+      const asset = Asset.fromModule(require("../data/tasks.csv"));
+      await asset.downloadAsync();
+
+      const destPath = `${FileSystem.documentDirectory}tasks.csv`;
+
+      // Copiar se ainda não existir
+      const fileInfo = await FileSystem.getInfoAsync(destPath);
+      if (!fileInfo.exists) {
+        await FileSystem.copyAsync({
+          from: asset.localUri,
+          to: destPath,
+        });
+      }
+
+      const csvContent = await FileSystem.readAsStringAsync(destPath);
+      const parsed = Papa.parse(csvContent.trim(), { header: false });
+
+      const tasksList = parsed.data
+        .filter((line) => line[0])
+        .map((line, index) => ({
+          id: index.toString(),
+          title: line[0],
+        }));
+
+      setTasks(tasksList);
+    } catch (error) {
+      console.error("Erro ao carregar CSV:", error);
+    }
+  };
 
   const saveData = async (newXp, newLevel) => {
     try {
@@ -81,7 +113,15 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: "bold", textAlign: "center" },
   level: { fontSize: 18, textAlign: "center", color: "#FFA500", marginBottom: 5 },
   xp: { fontSize: 16, textAlign: "center", marginBottom: 15, color: "#34C759" },
-  taskItem: { flexDirection: "row", justifyContent: "space-between", padding: 15, backgroundColor: "#fff", borderRadius: 8, marginBottom: 10, elevation: 2 },
+  taskItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 15,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginBottom: 10,
+    elevation: 2,
+  },
   taskText: { fontSize: 16 },
   check: { fontSize: 18 },
 });

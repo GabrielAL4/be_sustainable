@@ -7,6 +7,8 @@ import ProfileScreen from "./screens/ProfileScreen";
 import TaskScreen from "./screens/TaskScreen";
 import NewsScreen from "./screens/NewsScreen";
 import CarbonCalculationScreen from "./screens/CarbonCalculationScreen";
+import AdminLoginScreen from "./screens/AdminLoginScreen";
+import AdminHomeScreen from "./screens/AdminHomeScreen";
 
 const Stack = createStackNavigator();
 
@@ -20,6 +22,8 @@ export default function App() {
         <Stack.Screen name="Tasks" component={TaskScreen} options={{ title: "Tarefas" }} />
         <Stack.Screen name="News" component={NewsScreen} options={{ title: "Notícias" }} />
         <Stack.Screen name="CarbonCalculation" component={CarbonCalculationScreen} options={{ title: "Cálculo de Carbono" }} />
+        <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
+          <Stack.Screen name="AdminHome" component={AdminHomeScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
