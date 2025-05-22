@@ -145,38 +145,41 @@ router.put('/:id/complete', async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
+    // Pegar o user_id do corpo da requisição
+    const { user_id } = req.body;
+    if (!user_id) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
     task.completed = true;
     await task.save();
 
     // Update user points and XP
-    if (task.user_id) {
-      const user = await User.findByPk(task.user_id);
-      if (user) {
-        // Adicionar pontos e XP
-        user.points += task.points;
-        user.xp += task.points;
-        await user.save();
-
-        // Buscar informações atualizadas do nível
-        const currentLevel = await Level.findByPk(user.level_id);
-        
-        res.json({ 
-          task,
-          user: {
-            points: user.points,
-            xp: user.xp,
-            level: currentLevel?.name,
-            level_progress: currentLevel ? {
-              current: user.xp - currentLevel.min_points,
-              total: currentLevel.max_points - currentLevel.min_points
-            } : null
-          }
-        });
-        return;
-      }
+    const user = await User.findByPk(user_id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json({ task });
+    // Adicionar pontos e XP
+    user.points += task.points;
+    user.xp += task.points;
+    await user.save();
+
+    // Buscar informações atualizadas do nível
+    const currentLevel = await Level.findByPk(user.level_id);
+    
+    res.json({ 
+      task,
+      user: {
+        points: user.points,
+        xp: user.xp,
+        level: currentLevel?.name,
+        level_progress: currentLevel ? {
+          current: user.xp - currentLevel.min_points,
+          total: currentLevel.max_points - currentLevel.min_points
+        } : null
+      }
+    });
   } catch (error) {
     console.error('Error completing task:', error);
     res.status(500).json({ message: 'Error completing task', error });

@@ -2,6 +2,7 @@ import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config/database';
 import bcrypt from 'bcryptjs';
 import Level from './Level';
+import { Op } from 'sequelize';
 
 class User extends Model {
   public id!: number;
@@ -67,8 +68,8 @@ User.init(
         // Atualizar level_id baseado no XP atual
         const currentLevel = await Level.findOne({
           where: {
-            min_points: { [sequelize.Op.lte]: user.xp },
-            max_points: { [sequelize.Op.gt]: user.xp }
+            min_points: { [Op.lte]: user.xp },
+            max_points: { [Op.gt]: user.xp }
           }
         });
         if (currentLevel && currentLevel.id !== user.level_id) {

@@ -53,7 +53,7 @@ const TaskScreen = () => {
   const completeTask = async (taskId) => {
     try {
       setLoading(true);
-      await api.put(`/api/tasks/${taskId}/complete`);
+      await api.put(`/api/tasks/${taskId}/complete`, { user_id: user.id });
       
       // Recarregar as tasks do usuário após completar
       if (user) {

@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Level from '../models/Level';
 import { sequelize } from '../config/database';
+import { Op } from 'sequelize';
 
 const router = Router();
 
@@ -149,7 +150,7 @@ router.get('/:userId/level', async (req, res) => {
     // Buscar próximo nível
     const nextLevel = await Level.findOne({
       where: {
-        min_points: { [sequelize.Op.gt]: currentLevel.max_points }
+        min_points: { [Op.gt]: currentLevel.max_points }
       },
       order: [['min_points', 'ASC']],
       limit: 1
