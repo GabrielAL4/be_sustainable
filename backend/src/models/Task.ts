@@ -1,5 +1,6 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config/database';
+import User from './User';
 
 class Task extends Model {
   public id!: number;
@@ -54,5 +55,10 @@ Task.init(
     tableName: 'Tasks',
   }
 );
+
+Task.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'CompletedBy'
+});
 
 export default Task; 

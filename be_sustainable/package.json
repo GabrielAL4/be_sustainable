@@ -12,6 +12,7 @@
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
     "@react-native-async-storage/async-storage": "^2.1.2",
+    "@react-native-community/netinfo": "^11.4.1",
     "@react-native-picker/picker": "^2.11.0",
     "@react-navigation/native": "^7.0.15",
     "@react-navigation/stack": "^7.1.2",
@@ -40,8 +41,8 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@react-native-community/cli": "latest",
-    "typescript": "^5.3.3",
-    "@types/react": "~18.3.12"
+    "@types/react": "~18.3.12",
+    "typescript": "^5.3.3"
   },
   "private": true
 }

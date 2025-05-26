@@ -3,6 +3,7 @@ import User from '../models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Level from '../models/Level';
+import Task from '../models/Task';
 import { sequelize } from '../config/database';
 import { Op } from 'sequelize';
 
@@ -16,7 +17,10 @@ router.post('/create-admin', async (req, res) => {
       return res.status(400).json({ message: 'Admin user already exists' });
     }
 
+    console.log('=== ADMIN CREATION DEBUG ===');
     const hashedPassword = await bcrypt.hash('1234', 10);
+    console.log('Admin password hash:', hashedPassword);
+    
     const admin = await User.create({
       name: 'Admin',
       email: 'admin@besustainable.com',
@@ -24,6 +28,9 @@ router.post('/create-admin', async (req, res) => {
       level_id: 1,
       points: 0
     });
+
+    console.log('Admin stored password:', admin.password);
+    console.log('=== END ADMIN CREATION DEBUG ===');
 
     res.status(201).json({ message: 'Admin user created successfully', admin });
   } catch (error) {
@@ -41,13 +48,40 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    console.log('=== REGISTER DEBUG ===');
+    console.log('Raw password received:', password);
+    
+    // Hash password EXACTLY like admin creation - single hash only
     const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('Password hash:', hashedPassword);
+
+    // Create user directly without transaction to match admin creation
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      level_id: 1
+      level_id: 1,
+      points: 0,
+      xp: 0
     });
+
+    // Get 4 random tasks for the user
+    const randomTasks = await Task.findAll({
+      where: { user_id: null },
+      order: sequelize.literal('RANDOM()'),
+      limit: 4
+    });
+
+    // Create copies of the tasks for the user
+    for (const task of randomTasks) {
+      await Task.create({
+        title: task.title,
+        description: task.description,
+        points: task.points,
+        user_id: user.id,
+        completed: false
+      });
+    }
 
     const token = jwt.sign(
       { id: user.id },
@@ -55,8 +89,19 @@ router.post('/register', async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    res.status(201).json({ user, token });
+    // Remove password from response
+    const userResponse = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      points: user.points,
+      xp: user.xp,
+      level_id: user.level_id
+    };
+
+    res.status(201).json({ user: userResponse, token });
   } catch (error) {
+    console.error('Error in user registration:', error);
     res.status(500).json({ message: 'Error creating user', error });
   }
 });
@@ -64,22 +109,54 @@ router.post('/register', async (req, res) => {
 // Login user
 router.post('/login', async (req, res) => {
   try {
-    console.log('Login attempt:', req.body);
     const { email, password } = req.body;
+    console.log('\n=== LOGIN DEBUG ===');
+    console.log('Login attempt for:', email);
+    console.log('Raw password received:', password);
 
-    const user = await User.findOne({ where: { email } });
-    console.log('User found:', user ? 'yes' : 'no');
+    const user = await User.findOne({ 
+      where: { email },
+      attributes: ['id', 'email', 'password', 'name', 'points', 'xp', 'level_id']
+    });
     
     if (!user) {
-      console.log('User not found for email:', email);
+      console.log('User not found');
       return res.status(400).json({ message: 'User not found' });
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    console.log('Password validation:', isValidPassword ? 'success' : 'failed');
+    // Garantir que a senha não está vazia
+    if (!password) {
+      console.log('Password is empty');
+      return res.status(400).json({ message: 'Password is required' });
+    }
+
+    console.log('Found user:', { id: user.id, email: user.email });
+    console.log('Stored hashed password:', user.password);
+
+    // Tentar diferentes métodos de comparação
+    const directCompare = await bcrypt.compare(password, user.password);
+    console.log('Direct bcrypt.compare result:', directCompare);
+
+    // Se a comparação direta falhar, tentar outras abordagens
+    let isValidPassword = directCompare;
+
+    if (!isValidPassword) {
+      // Tentar com um novo hash
+      const newHash = await bcrypt.hash(password, 10);
+      console.log('New hash of input password:', newHash);
+      isValidPassword = await bcrypt.compare(password, newHash);
+      console.log('Compare with new hash result:', isValidPassword);
+    }
+
+    if (!isValidPassword) {
+      // Tentar comparar os hashes diretamente (não recomendado, mas para debug)
+      console.log('Direct hash comparison:', user.password === await bcrypt.hash(password, 10));
+    }
+
+    console.log('Final validation result:', isValidPassword);
+    console.log('=== END LOGIN DEBUG ===\n');
     
     if (!isValidPassword) {
-      console.log('Invalid password for user:', email);
       return res.status(400).json({ message: 'Invalid password' });
     }
 
@@ -89,8 +166,17 @@ router.post('/login', async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    console.log('Login successful for user:', email);
-    res.json({ user, token });
+    // Remove password from response
+    const userResponse = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      points: user.points,
+      xp: user.xp,
+      level_id: user.level_id
+    };
+
+    res.json({ user: userResponse, token });
   } catch (error) {
     console.error('Error in login route:', error);
     res.status(500).json({ message: 'Error logging in', error });
@@ -187,6 +273,29 @@ router.get('/:userId/level', async (req, res) => {
   } catch (error) {
     console.error('Error fetching user level info:', error);
     res.status(500).json({ message: 'Error fetching user level info', error });
+  }
+});
+
+// Temporary debug route
+router.get('/debug-passwords', async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'email', 'password'],
+      raw: true
+    });
+
+    console.log('=== PASSWORD DEBUG ===');
+    for (const user of users) {
+      console.log(`User ${user.email}:`);
+      console.log('Stored password:', user.password);
+      console.log('Can verify with 1234?', await bcrypt.compare('1234', user.password));
+      console.log('---');
+    }
+    console.log('=== END PASSWORD DEBUG ===');
+
+    res.json({ message: 'Debug info logged' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error in debug route', error });
   }
 });
 

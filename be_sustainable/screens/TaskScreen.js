@@ -2,53 +2,80 @@ import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from 'axios';
+import { getApiUrl, API_URL } from '../src/config';
 
-const api = axios.create({
-  baseURL: 'http://10.0.2.2:3000',
+// Criar uma instância do axios que será atualizada com a URL correta
+let api = axios.create({
+  baseURL: API_URL,
   timeout: 10000
 });
+
+// Função para atualizar a URL base do axios
+const updateApiBaseUrl = async () => {
+  try {
+    const baseUrl = await getApiUrl();
+    api = axios.create({
+      baseURL: baseUrl,
+      timeout: 10000
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar URL base:', error);
+  }
+};
 
 const TaskScreen = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    loadUserAndTasks();
-  }, []);
-
-  const loadUserAndTasks = async () => {
+  const loadTasks = async (userId) => {
     try {
-      // Carregar dados do usuário do AsyncStorage
-      const userStr = await AsyncStorage.getItem('@BeSustainable:user');
-      if (!userStr) {
-        console.log('Nenhum usuário encontrado no AsyncStorage');
-        Alert.alert('Erro', 'Usuário não encontrado');
-        return;
-      }
-
-      const userData = JSON.parse(userStr);
-      console.log('Dados do usuário:', userData);
-      setUser(userData);
-
-      // Carregar tasks do usuário
-      const response = await api.get(`/api/tasks/user/${userData.id}`);
-      console.log('Resposta da API:', response.data);
+      setLoading(true);
+      console.log('Carregando tarefas para usuário:', userId);
+      const response = await api.get(`/api/tasks/user/${userId}`);
+      console.log('Resposta do backend:', response.data);
       setTasks(response.data || []); // Garante que sempre será um array
-
-      // Log após atualizar o estado
-      console.log('Estado de tasks atualizado:', tasks);
     } catch (error) {
-      console.error('Erro ao carregar tasks:', error);
-      console.error('Detalhes do erro:', error.response?.data);
-      Alert.alert(
-        'Erro',
-        'Não foi possível carregar as tarefas. Tente novamente.'
-      );
+      console.error('Erro ao carregar tarefas:', error);
+      Alert.alert('Erro', 'Não foi possível carregar as tarefas. Tente novamente.');
+      setTasks([]);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        await updateApiBaseUrl(); // Atualiza a URL base do axios
+        const storedUser = await AsyncStorage.getItem('@BeSustainable:user');
+        console.log('Usuário armazenado:', storedUser);
+        
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          console.log('Usuário parseado:', parsedUser);
+          setUser(parsedUser);
+          if (parsedUser && parsedUser.id) {
+            await loadTasks(parsedUser.id);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao inicializar:', error);
+        Alert.alert('Erro', 'Não foi possível inicializar o aplicativo. Tente novamente.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeApp();
+  }, []);
+
+  // Atualizar tarefas quando o usuário mudar
+  useEffect(() => {
+    if (user && user.id) {
+      loadTasks(user.id);
+    }
+  }, [user]);
 
   const completeTask = async (taskId) => {
     try {
@@ -56,19 +83,14 @@ const TaskScreen = () => {
       await api.put(`/api/tasks/${taskId}/complete`, { user_id: user.id });
       
       // Recarregar as tasks do usuário após completar
-      if (user) {
-        const response = await api.get(`/api/tasks/user/${user.id}`);
-        console.log('Tasks após completar:', response.data);
-        setTasks(response.data || []); // Garante que sempre será um array
+      if (user && user.id) {
+        await loadTasks(user.id);
       }
 
       Alert.alert('Sucesso', 'Tarefa concluída com sucesso!');
     } catch (error) {
       console.error('Erro ao completar task:', error);
-      Alert.alert(
-        'Erro',
-        'Não foi possível completar a tarefa. Tente novamente.'
-      );
+      Alert.alert('Erro', 'Não foi possível completar a tarefa. Tente novamente.');
     } finally {
       setLoading(false);
     }

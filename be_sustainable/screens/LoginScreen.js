@@ -1,14 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-import { API_URL } from '../config';
-
-const api = axios.create({
-  baseURL: API_URL,
-  timeout: 10000
-});
+import { authAPI } from '../src/services/api';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
@@ -26,24 +20,60 @@ const LoginScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const endpoint = isRegistering ? '/api/users/register' : '/api/users/login';
-      const data = isRegistering 
-        ? { name, email, password }
-        : { email, password };
+      console.log('Iniciando processo de autenticação:', isRegistering ? 'registro' : 'login');
+      console.log('Dados de autenticação:', { 
+        email, 
+        passwordLength: password.length,
+        isRegistering,
+        name: isRegistering ? name : undefined
+      });
+      
+      let response;
+      if (isRegistering) {
+        console.log('Tentando registrar usuário:', { email, name });
+        response = await authAPI.register({ 
+          name, 
+          email, 
+          password 
+        });
+      } else {
+        console.log('Tentando fazer login:', { email });
+        response = await authAPI.login({ 
+          email, 
+          password: password // Garantir que a senha está sendo enviada
+        });
+      }
 
-      console.log('Tentando login com:', { endpoint, data });
-      const response = await api.post(endpoint, data);
+      console.log('Resposta recebida com sucesso');
+      
       const { user, token } = response.data;
+      console.log('Dados do usuário recebidos:', { 
+        userId: user.id, 
+        userName: user.name,
+        hasToken: !!token 
+      });
       
       // Salvar token e dados do usuário
       await AsyncStorage.setItem('@BeSustainable:token', token);
       await AsyncStorage.setItem('@BeSustainable:user', JSON.stringify(user));
       await AsyncStorage.setItem('userId', user.id.toString());
+      console.log('Dados salvos no AsyncStorage');
 
       // Navegar para a Home
       navigation.navigate("Home");
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('Erro detalhado:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          baseURL: error.config?.baseURL,
+          data: error.config?.data // Log dos dados enviados
+        }
+      });
+
       Alert.alert(
         "Erro",
         error.response?.data?.message || "Erro ao processar sua solicitação. Tente novamente."
@@ -109,9 +139,13 @@ const LoginScreen = ({ navigation }) => {
         onPress={handleSubmit}
         disabled={loading}
       >
-        <Text style={styles.loginButtonText}>
-          {loading ? "Carregando..." : (isRegistering ? "Cadastrar" : "Login")}
-        </Text>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.loginButtonText}>
+            {isRegistering ? "Cadastrar" : "Login"}
+          </Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={toggleMode} style={styles.toggleButton}>

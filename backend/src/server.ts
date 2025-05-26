@@ -12,12 +12,30 @@ import { up as updateLevels } from './migrations/20240522_update_levels';
 
 const app = express();
 
-app.use(cors());
+// Configure CORS to accept requests from your React Native app
+app.use(cors({
+  origin: '*', // In production, you should specify your app's domain
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(express.json());
 
-// Middleware para logar todas as requisições
+// Request logging middleware
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`, req.body);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
+
+// Response logging middleware
+app.use((req, res, next) => {
+  const originalSend = res.send;
+  res.send = function (body) {
+    console.log(`[${new Date().toISOString()}] Response:`, body);
+    return originalSend.call(this, body);
+  };
   next();
 });
 
@@ -26,6 +44,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/levels', levelRoutes);
 
+// Health check endpoint
 app.get('/', (req, res) => {
   res.json({ message: 'Backend is running!' });
 });
@@ -71,7 +90,7 @@ sequelize.authenticate()
   })
   .then(() => {
     console.log('Database synced successfully');
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server is running on port ${PORT}`);
     });
   })

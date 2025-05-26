@@ -14,6 +14,7 @@ class User extends Model {
   public level_id!: number;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
+  public isNewRecord!: boolean;
 }
 
 User.init(
@@ -61,11 +62,8 @@ User.init(
     sequelize,
     modelName: 'User',
     hooks: {
-      beforeCreate: async (user: User) => {
-        user.password = await bcrypt.hash(user.password, 10);
-      },
       beforeUpdate: async (user: User) => {
-        // Atualizar level_id baseado no XP atual
+        // Update level based on XP
         const currentLevel = await Level.findOne({
           where: {
             min_points: { [Op.lte]: user.xp },
@@ -75,7 +73,7 @@ User.init(
         if (currentLevel && currentLevel.id !== user.level_id) {
           user.level_id = currentLevel.id;
         }
-      },
+      }
     },
   }
 );
