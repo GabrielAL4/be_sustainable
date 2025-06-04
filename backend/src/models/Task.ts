@@ -9,6 +9,9 @@ class Task extends Model {
   public points!: number;
   public completed!: boolean;
   public user_id!: number | null;
+  public type!: 'daily' | 'weekly';
+  public required_completions!: number;
+  public current_completions!: number;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -36,6 +39,21 @@ Task.init(
     completed: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+      allowNull: false,
+    },
+    type: {
+      type: DataTypes.ENUM('daily', 'weekly'),
+      defaultValue: 'daily',
+      allowNull: false,
+    },
+    required_completions: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1,
+      allowNull: false,
+    },
+    current_completions: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
       allowNull: false,
     },
     user_id: {

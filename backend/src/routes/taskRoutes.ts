@@ -33,7 +33,7 @@ router.get('/random', async (req, res) => {
 // Create task
 router.post('/', async (req, res) => {
   try {
-    const { title, description, points, user_id } = req.body;
+    const { title, description, points, type, required_completions } = req.body;
     
     // Validate required fields
     if (!title || !description || points === undefined) {
@@ -61,14 +61,28 @@ router.post('/', async (req, res) => {
       });
     }
 
-    console.log('Creating task with data:', { title, description, points, user_id }); // Debug log
+    // Validate task type and required completions
+    if (type === 'weekly' && (!required_completions || required_completions < 1)) {
+      return res.status(400).json({
+        message: 'Invalid required completions',
+        error: {
+          details: {
+            required_completions: 'Required completions must be a positive number for weekly tasks'
+          }
+        }
+      });
+    }
+
+    console.log('Creating task with data:', { title, description, points, type, required_completions }); // Debug log
     
     const task = await Task.create({
       title,
       description,
       points,
-      user_id: user_id || null,
-      completed: false // Explicitly set default value
+      type: type || 'daily',
+      required_completions: type === 'weekly' ? required_completions : 1,
+      current_completions: 0,
+      completed: false
     });
 
     console.log('Task created successfully:', task.toJSON()); // Debug log
@@ -94,18 +108,17 @@ router.get('/user/:userId', async (req, res) => {
   try {
     console.log('Buscando tasks para usuário:', req.params.userId);
     
-    // Calcular a data limite de 24 horas atrás
+    // Calcular a data limite de 24 horas atrás para tarefas diárias
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Calcular a data limite de 7 dias atrás para tarefas semanais
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     
-    // Buscar todas as tasks disponíveis que:
-    // 1. Não estão completadas, OU
-    // 2. Foram completadas por este usuário nas últimas 24 horas
-    const tasks = await Task.findAll({
+    // Buscar tarefas diárias
+    const dailyTasks = await Task.findAll({
       where: {
+        type: 'daily',
         [Op.or]: [
-          // Tasks não completadas
           { completed: false },
-          // Tasks completadas por este usuário nas últimas 24 horas
           {
             completed: true,
             user_id: req.params.userId,
@@ -113,21 +126,30 @@ router.get('/user/:userId', async (req, res) => {
           }
         ]
       },
-      order: [
-        ['completed', 'ASC'], // Tasks não completadas primeiro
-        Sequelize.literal('RANDOM()') // Randomizar dentro de cada grupo
-      ],
+      order: [['completed', 'ASC'], Sequelize.literal('RANDOM()')],
       limit: 4
     });
 
+    // Buscar tarefas semanais
+    const weeklyTasks = await Task.findAll({
+      where: {
+        type: 'weekly',
+        [Op.or]: [
+          { completed: false },
+          {
+            completed: true,
+            user_id: req.params.userId,
+            updatedAt: { [Op.gte]: oneWeekAgo }
+          }
+        ]
+      },
+      order: [['completed', 'ASC'], Sequelize.literal('RANDOM()')],
+      limit: 1
+    });
+
+    // Combinar as tarefas
+    const tasks = [...dailyTasks, ...weeklyTasks];
     console.log('Tasks encontradas:', tasks.length);
-    console.log('Tasks filtradas:', tasks.map(t => ({
-      id: t.id,
-      title: t.title,
-      completed: t.completed,
-      user_id: t.user_id,
-      updatedAt: t.updatedAt
-    })));
     
     res.json(tasks);
   } catch (error: any) {
@@ -171,32 +193,42 @@ router.put('/:id/complete', async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    // Pegar o user_id do corpo da requisição
-    const { user_id } = req.body;
+    const { user_id, current_completions } = req.body;
     if (!user_id) {
       return res.status(400).json({ message: 'User ID is required' });
     }
 
-    // Verificar se a task já foi completada
-    if (task.completed && task.user_id) {
-      return res.status(400).json({ message: 'Task already completed' });
-    }
-
-    // Marcar a task como completada e associar ao usuário
-    task.completed = true;
-    task.user_id = user_id; // Registrar qual usuário completou
-    await task.save();
-
-    // Update user points and XP
     const user = await User.findByPk(user_id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Adicionar pontos e XP
-    user.points += task.points;
-    user.xp += task.points;
-    await user.save();
+    if (task.type === 'weekly') {
+      // Para tarefas semanais, atualizamos o contador
+      const newCompletions = current_completions || (task.current_completions + 1);
+      task.current_completions = newCompletions;
+      
+      // Verificamos se atingiu o objetivo
+      if (newCompletions >= task.required_completions) {
+        task.completed = true;
+        // Só damos os pontos quando completa totalmente
+        user.points += task.points;
+        user.xp += task.points;
+        await user.save();
+      }
+    } else {
+      // Para tarefas diárias, comportamento normal
+      if (task.completed) {
+        return res.status(400).json({ message: 'Task already completed' });
+      }
+      task.completed = true;
+      user.points += task.points;
+      user.xp += task.points;
+      await user.save();
+    }
+
+    task.user_id = user_id;
+    await task.save();
 
     // Buscar informações atualizadas do nível
     const currentLevel = await Level.findByPk(user.level_id);

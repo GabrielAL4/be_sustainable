@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from 'axios';
 import { getApiUrl, API_URL } from '../src/config';
@@ -32,9 +32,29 @@ const TaskScreen = () => {
     try {
       setLoading(true);
       console.log('Carregando tarefas para usuário:', userId);
+      
       const response = await api.get(`/api/tasks/user/${userId}`);
-      console.log('Resposta do backend:', response.data);
-      setTasks(response.data || []); // Garante que sempre será um array
+      const allTasks = response.data || [];
+      console.log('Todas as tarefas:', allTasks);
+
+      // Primeiro, separamos as tarefas por tipo
+      let dailyTasks = allTasks.filter(task => task.type === 'daily' || !task.type);
+      let weeklyTasks = allTasks.filter(task => task.type === 'weekly');
+
+      console.log('Tarefas diárias antes do limite:', dailyTasks);
+      console.log('Tarefas semanais antes do limite:', weeklyTasks);
+
+      // Limitamos as tarefas diárias às 4 primeiras
+      dailyTasks = dailyTasks.slice(0, 4);
+
+      // Limitamos a uma tarefa semanal
+      weeklyTasks = weeklyTasks.slice(0, 1);
+
+      // Combinamos as tarefas na ordem correta
+      const organizedTasks = [...dailyTasks, ...weeklyTasks];
+      console.log('Tarefas organizadas final:', organizedTasks);
+
+      setTasks(organizedTasks);
     } catch (error) {
       console.error('Erro ao carregar tarefas:', error);
       Alert.alert('Erro', 'Não foi possível carregar as tarefas. Tente novamente.');
@@ -47,7 +67,7 @@ const TaskScreen = () => {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        await updateApiBaseUrl(); // Atualiza a URL base do axios
+        await updateApiBaseUrl();
         const storedUser = await AsyncStorage.getItem('@BeSustainable:user');
         console.log('Usuário armazenado:', storedUser);
         
@@ -55,9 +75,6 @@ const TaskScreen = () => {
           const parsedUser = JSON.parse(storedUser);
           console.log('Usuário parseado:', parsedUser);
           setUser(parsedUser);
-          if (parsedUser && parsedUser.id) {
-            await loadTasks(parsedUser.id);
-          }
         }
       } catch (error) {
         console.error('Erro ao inicializar:', error);
@@ -77,27 +94,109 @@ const TaskScreen = () => {
     }
   }, [user]);
 
-  const completeTask = async (taskId) => {
+  const completeTask = async (task) => {
     try {
       setLoading(true);
-      await api.put(`/api/tasks/${taskId}/complete`, { user_id: user.id });
       
-      // Recarregar as tasks do usuário após completar
+      if (task.type === 'weekly') {
+        // Para tarefas semanais, incrementamos o contador
+        const currentCount = task.current_completions || 0;
+        const requiredCount = task.required_completions || 1;
+
+        // Verifica se já atingiu o limite
+        if (currentCount >= requiredCount) {
+          Alert.alert('Aviso', 'Você já completou esta tarefa o número máximo de vezes!');
+          return;
+        }
+
+        // Incrementa o contador
+        const newCount = currentCount + 1;
+        console.log(`Atualizando progresso da tarefa ${task.id}: ${newCount}/${requiredCount}`);
+
+        await api.put(`/api/tasks/${task.id}/complete`, { 
+          user_id: user.id,
+          current_completions: newCount,
+          completed: newCount >= requiredCount
+        });
+      } else {
+        // Para tarefas diárias, apenas marca como completa
+        await api.put(`/api/tasks/${task.id}/complete`, { 
+          user_id: user.id,
+          completed: true
+        });
+      }
+      
+      // Recarrega as tasks do usuário após completar
       if (user && user.id) {
         await loadTasks(user.id);
       }
 
-      Alert.alert('Sucesso', 'Tarefa concluída com sucesso!');
+      Alert.alert('Sucesso', 'Progresso registrado com sucesso!');
     } catch (error) {
       console.error('Erro ao completar task:', error);
-      Alert.alert('Erro', 'Não foi possível completar a tarefa. Tente novamente.');
+      Alert.alert('Erro', 'Não foi possível registrar o progresso. Tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Log quando o componente renderiza
-  console.log('Renderizando TaskScreen. Tasks:', tasks);
+  const renderTaskProgress = (task) => {
+    if (task.type === 'weekly') {
+      const current = task.current_completions || 0;
+      const required = task.required_completions || 1;
+      return (
+        <View style={styles.progressContainer}>
+          <Text style={styles.progressText}>Progresso: {current}/{required}</Text>
+          <View style={styles.progressBar}>
+            <View 
+              style={[
+                styles.progressFill, 
+                { width: `${(current / required) * 100}%` }
+              ]} 
+            />
+          </View>
+        </View>
+      );
+    }
+    return null;
+  };
+
+  const renderTaskSection = (sectionTasks, title) => {
+    if (!sectionTasks || sectionTasks.length === 0) return null;
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {sectionTasks.map((task) => (
+          <TouchableOpacity 
+            key={task.id}
+            style={[
+              styles.taskItem,
+              task.completed && styles.taskCompleted,
+              task.type === 'weekly' && styles.weeklyTask
+            ]}
+            onPress={() => !task.completed && completeTask(task)}
+            disabled={task.completed}
+          >
+            <View style={styles.taskContent}>
+              <Text style={[styles.taskText, task.completed && styles.taskTextCompleted]}>
+                {task.title}
+              </Text>
+              <Text style={styles.pointsText}>{task.points} pontos</Text>
+              {renderTaskProgress(task)}
+            </View>
+            {task.completed ? (
+              <Text style={styles.completedCheck}>✓</Text>
+            ) : (
+              <Text style={styles.points}>
+                {task.type === 'weekly' ? 'Progredir' : 'Completar'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -106,6 +205,10 @@ const TaskScreen = () => {
       </View>
     );
   }
+
+  // Separa as tarefas em diárias e semanais para renderização
+  const dailyTasks = tasks.filter(task => task.type === 'daily' || !task.type);
+  const weeklyTasks = tasks.filter(task => task.type === 'weekly');
 
   return (
     <View style={styles.container}>
@@ -116,29 +219,10 @@ const TaskScreen = () => {
       ) : tasks.length === 0 ? (
         <Text style={styles.emptyText}>Nenhuma tarefa disponível</Text>
       ) : (
-        <FlatList
-          data={tasks}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={[styles.taskItem, item.completed && styles.taskCompleted]}
-              onPress={() => !item.completed && completeTask(item.id)}
-              disabled={item.completed}
-            >
-              <View style={styles.taskContent}>
-                <Text style={[styles.taskText, item.completed && styles.taskTextCompleted]}>
-                  {item.title}
-                </Text>
-                <Text style={styles.pointsText}>{item.points} pontos</Text>
-              </View>
-              {item.completed ? (
-                <Text style={styles.completedCheck}>✓</Text>
-              ) : (
-                <Text style={styles.points}>Completar</Text>
-              )}
-            </TouchableOpacity>
-          )}
-        />
+        <ScrollView style={styles.scrollView}>
+          {renderTaskSection(dailyTasks, 'Tarefas Diárias')}
+          {renderTaskSection(weeklyTasks, 'Tarefas Semanais')}
+        </ScrollView>
       )}
     </View>
   );
@@ -204,7 +288,48 @@ const styles = StyleSheet.create({
     color: '#34C759',
     fontSize: 20,
     fontWeight: 'bold',
-  }
+  },
+  weeklyTask: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
+  taskType: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 4,
+  },
+  progressContainer: {
+    marginTop: 8,
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#007AFF',
+    marginBottom: 4,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: '#E1E1E1',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#007AFF',
+  },
+  section: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 20,
+    marginBottom: 10,
+    paddingHorizontal: 5,
+  },
+  scrollView: {
+    flex: 1,
+  },
 });
 
 export default TaskScreen;

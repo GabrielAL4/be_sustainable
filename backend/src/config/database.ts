@@ -23,9 +23,22 @@ export const connectDB = async () => {
     await sequelize.authenticate();
     console.log('Database connected successfully');
     
-    // Sync database without force
-    await sequelize.sync();
-    console.log('Database tables synced successfully');
+    // Forçar a recriação das tabelas
+    await sequelize.sync({ force: true });
+    console.log('Database tables recreated successfully');
+
+    // Importar o modelo Level diretamente
+    const { default: Level } = await import('../models/Level');
+
+    // Criar níveis padrão
+    await Level.bulkCreate([
+      { name: 'Iniciante', min_points: 0, max_points: 100 },
+      { name: 'Intermediário', min_points: 101, max_points: 300 },
+      { name: 'Avançado', min_points: 301, max_points: 600 },
+      { name: 'Expert', min_points: 601, max_points: 1000 }
+    ]);
+    console.log('Default levels created successfully');
+
   } catch (error) {
     console.error('Unable to connect to the database:', error);
     process.exit(1);

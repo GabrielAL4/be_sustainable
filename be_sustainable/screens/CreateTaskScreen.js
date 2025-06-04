@@ -24,6 +24,8 @@ const CreateTaskScreen = ({ navigation }) => {
   const [points, setPoints] = useState('');
   const [loading, setLoading] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [taskType, setTaskType] = useState('daily'); // 'daily' ou 'weekly'
+  const [requiredCompletions, setRequiredCompletions] = useState('1');
 
   useEffect(() => {
     loadTasks();
@@ -43,6 +45,32 @@ const CreateTaskScreen = ({ navigation }) => {
     }
   };
 
+  const validateTaskLimits = async () => {
+    try {
+      const response = await api.get('/api/tasks');
+      const existingTasks = response.data || [];
+      
+      const dailyTasks = existingTasks.filter(task => task.type === 'daily');
+      const weeklyTasks = existingTasks.filter(task => task.type === 'weekly');
+
+      if (taskType === 'daily' && dailyTasks.length >= 4 && !editingTask) {
+        Alert.alert('Limite Atingido', 'Você já possui 4 tarefas diárias. Remova alguma tarefa antes de adicionar uma nova.');
+        return false;
+      }
+
+      if (taskType === 'weekly' && weeklyTasks.length >= 1 && !editingTask) {
+        Alert.alert('Limite Atingido', 'Você já possui uma tarefa semanal. Remova a tarefa existente antes de adicionar uma nova.');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao validar limites:', error);
+      Alert.alert('Erro', 'Não foi possível validar os limites de tarefas.');
+      return false;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim() || !points) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos');
@@ -55,25 +83,42 @@ const CreateTaskScreen = ({ navigation }) => {
       return;
     }
 
+    if (taskType === 'weekly') {
+      const completionsNum = parseInt(requiredCompletions);
+      if (isNaN(completionsNum) || completionsNum <= 0) {
+        Alert.alert('Erro', 'O número de completações deve ser um número positivo');
+        return;
+      }
+    }
+
+    // Validar limites antes de criar/editar
+    const canProceed = await validateTaskLimits();
+    if (!canProceed) {
+      return;
+    }
+
     try {
       setLoading(true);
       const taskData = {
         title: title.trim(),
         description: description.trim(),
         points: pointsNum,
+        type: taskType,
+        required_completions: taskType === 'weekly' ? parseInt(requiredCompletions) : 1,
+        current_completions: 0,
         completed: false
       };
 
-      console.log('Enviando dados:', taskData); // Debug
+      console.log('Enviando dados:', taskData);
 
       let response;
       if (editingTask) {
         response = await api.put(`/api/tasks/${editingTask.id}`, taskData);
-        console.log('Resposta da atualização:', response.data); // Debug
+        console.log('Resposta da atualização:', response.data);
         Alert.alert('Sucesso', 'Tarefa atualizada com sucesso!');
       } else {
         response = await api.post('/api/tasks', taskData);
-        console.log('Resposta da criação:', response.data); // Debug
+        console.log('Resposta da criação:', response.data);
         Alert.alert('Sucesso', 'Tarefa criada com sucesso!');
       }
       
@@ -132,12 +177,16 @@ const CreateTaskScreen = ({ navigation }) => {
     setTitle(task.title);
     setDescription(task.description);
     setPoints(task.points.toString());
+    setTaskType(task.type || 'daily');
+    setRequiredCompletions(task.required_completions?.toString() || '1');
   };
 
   const clearForm = () => {
     setTitle('');
     setDescription('');
     setPoints('');
+    setTaskType('daily');
+    setRequiredCompletions('1');
     setEditingTask(null);
   };
 
@@ -163,6 +212,44 @@ const CreateTaskScreen = ({ navigation }) => {
           multiline
           numberOfLines={4}
         />
+
+        <View style={styles.typeSelector}>
+          <TouchableOpacity
+            style={[
+              styles.typeButton,
+              taskType === 'daily' && styles.typeButtonSelected
+            ]}
+            onPress={() => setTaskType('daily')}
+          >
+            <Text style={[
+              styles.typeButtonText,
+              taskType === 'daily' && styles.typeButtonTextSelected
+            ]}>Diária</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.typeButton,
+              taskType === 'weekly' && styles.typeButtonSelected
+            ]}
+            onPress={() => setTaskType('weekly')}
+          >
+            <Text style={[
+              styles.typeButtonText,
+              taskType === 'weekly' && styles.typeButtonTextSelected
+            ]}>Semanal</Text>
+          </TouchableOpacity>
+        </View>
+
+        {taskType === 'weekly' && (
+          <TextInput
+            style={styles.input}
+            placeholder="Número de completações necessárias"
+            value={requiredCompletions}
+            onChangeText={setRequiredCompletions}
+            keyboardType="numeric"
+          />
+        )}
 
         <TextInput
           style={styles.input}
@@ -203,7 +290,20 @@ const CreateTaskScreen = ({ navigation }) => {
           <View style={styles.taskInfo}>
             <Text style={styles.taskTitle}>{task.title}</Text>
             <Text style={styles.taskDescription}>{task.description}</Text>
-            <Text style={styles.taskPoints}>{task.points} pontos</Text>
+            <View style={styles.taskMetaInfo}>
+              <Text style={styles.taskPoints}>{task.points} pontos</Text>
+              <Text style={[
+                styles.taskType,
+                task.type === 'weekly' ? styles.weeklyType : styles.dailyType
+              ]}>
+                {task.type === 'weekly' ? 'Semanal' : 'Diária'}
+              </Text>
+              {task.type === 'weekly' && (
+                <Text style={styles.completionsText}>
+                  Completações: {task.required_completions}
+                </Text>
+              )}
+            </View>
           </View>
           <View style={styles.taskActions}>
             <TouchableOpacity
@@ -317,6 +417,55 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: '#fff',
     fontSize: 14,
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  typeButton: {
+    flex: 1,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    marginHorizontal: 5,
+    alignItems: 'center',
+  },
+  typeButtonSelected: {
+    backgroundColor: '#34C759',
+    borderColor: '#34C759',
+  },
+  typeButtonText: {
+    color: '#666',
+  },
+  typeButtonTextSelected: {
+    color: '#fff',
+  },
+  taskMetaInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  taskType: {
+    fontSize: 12,
+    marginLeft: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  dailyType: {
+    backgroundColor: '#E8E8E8',
+    color: '#666',
+  },
+  weeklyType: {
+    backgroundColor: '#007AFF20',
+    color: '#007AFF',
+  },
+  completionsText: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 10,
   },
 });
 

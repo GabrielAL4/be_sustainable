@@ -36,4 +36,21 @@ Level.init(
   }
 );
 
+export const createDefaultLevels = async () => {
+  try {
+    const count = await Level.count();
+    if (count === 0) {
+      await Level.bulkCreate([
+        { name: 'Iniciante', min_points: 0, max_points: 100 },
+        { name: 'Intermediário', min_points: 101, max_points: 300 },
+        { name: 'Avançado', min_points: 301, max_points: 600 },
+        { name: 'Expert', min_points: 601, max_points: 1000 }
+      ]);
+      console.log('Default levels created successfully');
+    }
+  } catch (error) {
+    console.error('Error creating default levels:', error);
+  }
+};
+
 export default Level; 

@@ -4,19 +4,17 @@ import userRoutes from './routes/userRoutes';
 import taskRoutes from './routes/taskRoutes';
 import levelRoutes from './routes/levelRoutes';
 import { sequelize } from './config/database';
-import { up as addXpColumn } from './migrations/20240522_add_xp_column';
-import { up as addDefaultLevel } from './migrations/20240522_add_default_level';
-import { up as addLevelForeignKey } from './migrations/20240522_add_level_foreign_key';
-import { up as addInitialLevels } from './migrations/20240522_add_initial_levels';
-import { up as updateLevels } from './migrations/20240522_update_levels';
+import Level, { createDefaultLevels } from './models/Level';
+import { DataTypes } from 'sequelize';
 
 const app = express();
 
 // Configure CORS to accept requests from your React Native app
 app.use(cors({
-  origin: '*', // In production, you should specify your app's domain
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: ['http://localhost:3000', 'http://10.0.2.2:3000', '*'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 app.use(express.json());
@@ -25,7 +23,9 @@ app.use(express.json());
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
+  if (req.method !== 'OPTIONS') {
+    console.log('Body:', req.body);
+  }
   next();
 });
 
@@ -49,52 +49,74 @@ app.get('/', (req, res) => {
   res.json({ message: 'Backend is running!' });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
-// Initialize database connection and run migrations
-sequelize.authenticate()
-  .then(async () => {
+// Initialize database and server
+const startServer = async () => {
+  try {
+    // Conectar ao banco de dados
+    await sequelize.authenticate();
     console.log('Database connected successfully');
-    
-    // Run migrations in order
-    try {
-      await addXpColumn(sequelize.getQueryInterface());
-      console.log('XP column migration completed');
-    } catch (error: any) {
-      console.log('XP column migration error (might already be applied):', error.message);
-    }
 
-    try {
-      await addDefaultLevel(sequelize.getQueryInterface());
-      console.log('Default level migration completed');
-    } catch (error: any) {
-      console.log('Default level migration error (might already be applied):', error.message);
-    }
-
-    try {
-      await addLevelForeignKey(sequelize.getQueryInterface());
-      console.log('Level foreign key migration completed');
-    } catch (error: any) {
-      console.log('Level foreign key migration error (might already be applied):', error.message);
-    }
-
-    try {
-      await updateLevels(sequelize.getQueryInterface());
-      console.log('Update levels migration completed');
-    } catch (error: any) {
-      console.log('Update levels migration error:', error.message);
-    }
-
-    // Sync models without altering existing columns
-    return sequelize.sync();
-  })
-  .then(() => {
-    console.log('Database synced successfully');
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server is running on port ${PORT}`);
+    // Criar tabela de níveis primeiro
+    await sequelize.getQueryInterface().createTable('Levels', {
+      id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+      },
+      name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      min_points: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      max_points: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+      }
+    }).catch(error => {
+      if (error.name === 'SequelizeUniqueConstraintError' || error.name === 'SequelizeTableExistsError') {
+        console.log('Levels table already exists');
+      } else {
+        throw error;
+      }
     });
-  })
-  .catch((error) => {
-    console.error('Error initializing database:', error);
+
+    // Criar níveis padrão
+    await createDefaultLevels();
+
+    // Sincronizar outros modelos
+    await sequelize.sync();
+    console.log('Database synced successfully');
+
+    // Iniciar o servidor em todas as interfaces
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      const address = server.address();
+      if (address && typeof address === 'object') {
+        console.log(`Server is running on http://${address.address}:${address.port}`);
+      } else {
+        console.log(`Server is running on port ${PORT}`);
+      }
+    });
+
+    // Configurar timeouts mais longos
+    server.timeout = 120000; // 2 minutos
+    server.keepAliveTimeout = 120000;
+  } catch (error) {
+    console.error('Error starting server:', error);
     process.exit(1);
-  }); 
+  }
+};
+
+startServer(); 

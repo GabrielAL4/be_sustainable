@@ -33,9 +33,13 @@ services:
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
-    command: sh -c "npm install --include=dev && npm run dev"
+    command: >
+      sh -c "npm install --include=dev &&
+             npx tsc &&
+             npm run dev"
     networks:
       - app_network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
