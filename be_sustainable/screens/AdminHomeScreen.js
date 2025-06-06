@@ -4,8 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 
 const adminMenuItems = [
   { title: "Criar Task", screen: "CreateTask", color: "#34C759" },
-  { title: "Criar Usuário", screen: "CriarUsuario", color: "#34C759" },
-  { title: "Ver Lista de Usuários", screen: "ListaUsuarios", color: "#34C759" },
+  { title: "Ver Lista de Usuários", screen: "ViewUser", color: "#34C759" },
   { title: "Mudar Notícias", screen: "MudarNoticias", color: "#34C759" },
 ];
 

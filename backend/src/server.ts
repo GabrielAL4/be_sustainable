@@ -6,6 +6,7 @@ import levelRoutes from './routes/levelRoutes';
 import { sequelize } from './config/database';
 import Level, { createDefaultLevels } from './models/Level';
 import { DataTypes } from 'sequelize';
+import UserTask from './models/UserTask';
 
 const app = express();
 
