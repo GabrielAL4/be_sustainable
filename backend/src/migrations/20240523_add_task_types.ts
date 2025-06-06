@@ -18,6 +18,12 @@ export async function up(queryInterface: QueryInterface): Promise<void> {
     defaultValue: 0,
     allowNull: false,
   });
+
+  await queryInterface.addColumn('UserTasks', 'progress', {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    allowNull: false,
+  });
 }
 
 export async function down(queryInterface: QueryInterface): Promise<void> {
@@ -25,4 +31,5 @@ export async function down(queryInterface: QueryInterface): Promise<void> {
   await queryInterface.removeColumn('Tasks', 'required_completions');
   await queryInterface.removeColumn('Tasks', 'type');
   await queryInterface.sequelize.query('DROP TYPE IF EXISTS enum_Tasks_type;');
+  await queryInterface.removeColumn('UserTasks', 'progress');
 } 

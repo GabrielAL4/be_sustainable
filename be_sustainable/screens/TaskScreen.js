@@ -47,12 +47,11 @@ const TaskScreen = () => {
       // Limitamos as tarefas diárias às 4 primeiras
       dailyTasks = dailyTasks.slice(0, 4);
 
-      // Limitamos a uma tarefa semanal
-      weeklyTasks = weeklyTasks.slice(0, 1);
-
       // Combinamos as tarefas na ordem correta
       const organizedTasks = [...dailyTasks, ...weeklyTasks];
       console.log('Tarefas organizadas final:', organizedTasks);
+
+      console.log('Retornando tarefas:', { dailyTasks, weeklyTasks });
 
       setTasks(organizedTasks);
     } catch (error) {
@@ -97,40 +96,18 @@ const TaskScreen = () => {
   const completeTask = async (task) => {
     try {
       setLoading(true);
-      
       if (task.type === 'weekly') {
-        // Para tarefas semanais, incrementamos o contador
-        const currentCount = task.current_completions || 0;
-        const requiredCount = task.required_completions || 1;
-
-        // Verifica se já atingiu o limite
-        if (currentCount >= requiredCount) {
+        if (task.completed) {
           Alert.alert('Aviso', 'Você já completou esta tarefa o número máximo de vezes!');
           return;
         }
-
-        // Incrementa o contador
-        const newCount = currentCount + 1;
-        console.log(`Atualizando progresso da tarefa ${task.id}: ${newCount}/${requiredCount}`);
-
-        await api.put(`/api/tasks/${task.id}/complete`, { 
-          user_id: user.id,
-          current_completions: newCount,
-          completed: newCount >= requiredCount
-        });
+        await api.put(`/api/tasks/${task.id}/complete`, { user_id: user.id });
       } else {
-        // Para tarefas diárias, apenas marca como completa
-        await api.put(`/api/tasks/${task.id}/complete`, { 
-          user_id: user.id,
-          completed: true
-        });
+        await api.put(`/api/tasks/${task.id}/complete`, { user_id: user.id, completed: true });
       }
-      
-      // Recarrega as tasks do usuário após completar
       if (user && user.id) {
         await loadTasks(user.id);
       }
-
       Alert.alert('Sucesso', 'Progresso registrado com sucesso!');
     } catch (error) {
       console.error('Erro ao completar task:', error);
@@ -142,7 +119,7 @@ const TaskScreen = () => {
 
   const renderTaskProgress = (task) => {
     if (task.type === 'weekly') {
-      const current = task.current_completions || 0;
+      const current = task.progress || 0;
       const required = task.required_completions || 1;
       return (
         <View style={styles.progressContainer}>
@@ -207,7 +184,7 @@ const TaskScreen = () => {
   }
 
   // Separa as tarefas em diárias e semanais para renderização
-  const dailyTasks = tasks.filter(task => task.type === 'daily' || !task.type);
+  const dailyTasks = tasks.filter(task => task.type === 'daily');
   const weeklyTasks = tasks.filter(task => task.type === 'weekly');
 
   return (

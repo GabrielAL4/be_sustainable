@@ -3,18 +3,17 @@ import { sequelize } from '../config/database';
 import User from './User';
 import Task from './Task';
 
-class UserTask extends Model {
+class UserWeeklyTask extends Model {
   public id!: number;
   public user_id!: number;
   public task_id!: number;
-  public completed!: boolean;
-  public completedAt!: Date | null;
-  public progress!: number;
+  public start_date!: Date;
+  public end_date!: Date | null;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
 
-UserTask.init(
+UserWeeklyTask.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -41,29 +40,23 @@ UserTask.init(
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
     },
-    completed: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
+    start_date: {
+      type: DataTypes.DATE,
       allowNull: false,
     },
-    completedAt: {
+    end_date: {
       type: DataTypes.DATE,
       allowNull: true,
-    },
-    progress: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-      allowNull: false,
     },
   },
   {
     sequelize,
-    modelName: 'UserTask',
-    tableName: 'UserTasks',
+    modelName: 'UserWeeklyTask',
+    tableName: 'UserWeeklyTasks',
   }
 );
 
-UserTask.belongsTo(User, { foreignKey: 'user_id' });
-UserTask.belongsTo(Task, { foreignKey: 'task_id' });
+UserWeeklyTask.belongsTo(User, { foreignKey: 'user_id' });
+UserWeeklyTask.belongsTo(Task, { foreignKey: 'task_id' });
 
-export default UserTask; 
+export default UserWeeklyTask; 
