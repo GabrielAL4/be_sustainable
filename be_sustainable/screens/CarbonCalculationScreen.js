@@ -3,28 +3,42 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 
 
 export default function CarbonCalculatorScreen() {
   const [vehicleType, setVehicleType] = useState('');
-  const [numComputers, setNumComputers] = useState('');
+  const [dailyKm, setDailyKm] = useState('');
+  const [workDays, setWorkDays] = useState('22'); // média padrão
+  const [computerHours, setComputerHours] = useState('');
   const [fridgeSize, setFridgeSize] = useState('');
   const [totalCO2, setTotalCO2] = useState(null);
 
   const calcularEmissao = () => {
     let co2 = 0;
 
-    if (vehicleType === 'carro') co2 += 250;
-    else if (vehicleType === 'moto') co2 += 100;
+    const kmPorDia = parseFloat(dailyKm || 0);
+    const diasTrabalho = parseInt(workDays || 0);
 
-    co2 += parseFloat(numComputers || 0) * 0.0136 * 30;
+    // Fatores de emissão por km (kg CO₂/km)
+    const fatorCarro = 0.192;
+    const fatorMoto = 0.103;
 
-    if (fridgeSize === 'pequena') co2 += 20;
-    else if (fridgeSize === 'media') co2 += 30;
-    else if (fridgeSize === 'grande') co2 += 50;
+    if (vehicleType === 'carro') {
+      co2 += kmPorDia * diasTrabalho * fatorCarro;
+    } else if (vehicleType === 'moto') {
+      co2 += kmPorDia * diasTrabalho * fatorMoto;
+    }
 
-    setTotalCO2(co2);
+    // Computador: 0.0168 kg CO₂ por hora de uso
+    co2 += parseFloat(computerHours || 0) * 0.0168 * 30;
+
+    // Geladeira (kg CO₂/mês)
+    if (fridgeSize === 'pequena') co2 += 2.1;
+    else if (fridgeSize === 'media') co2 += 2.9;
+    else if (fridgeSize === 'grande') co2 += 4.2;
+
+    setTotalCO2(co2.toFixed(2));
   };
 
   const calcularMudas = () => {
     if (!totalCO2) return 0;
-    return Math.ceil(totalCO2 / 15);
+    return Math.ceil(totalCO2 / 15); // 1 muda = ~15kg CO₂/ano (conservador)
   };
 
   return (
@@ -36,10 +50,7 @@ export default function CarbonCalculatorScreen() {
         {['carro', 'moto', 'nenhum'].map((type) => (
           <TouchableOpacity
             key={type}
-            style={[
-              styles.option,
-              vehicleType === type && styles.selectedOption,
-            ]}
+            style={[styles.option, vehicleType === type && styles.selectedOption]}
             onPress={() => setVehicleType(type)}
           >
             <Text style={styles.optionText}>{type}</Text>
@@ -47,12 +58,34 @@ export default function CarbonCalculatorScreen() {
         ))}
       </View>
 
+      {vehicleType !== 'nenhum' && (
+        <>
+          <Text style={styles.label}>Quantos km você percorre por dia (ida e volta)?</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={dailyKm}
+            onChangeText={setDailyKm}
+            placeholder="Ex: 20"
+          />
+
+          <Text style={styles.label}>Quantos dias por mês você trabalha presencialmente?</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={workDays}
+            onChangeText={setWorkDays}
+            placeholder="Ex: 22"
+          />
+        </>
+      )}
+
       <Text style={styles.label}>Quantas horas por dia você usa o computador?</Text>
       <TextInput
         style={styles.input}
         keyboardType="numeric"
-        value={numComputers}
-        onChangeText={setNumComputers}
+        value={computerHours}
+        onChangeText={setComputerHours}
         placeholder="Ex: 4"
       />
 
@@ -61,10 +94,7 @@ export default function CarbonCalculatorScreen() {
         {['pequena', 'media', 'grande'].map((size) => (
           <TouchableOpacity
             key={size}
-            style={[
-              styles.option,
-              fridgeSize === size && styles.selectedOption,
-            ]}
+            style={[styles.option, fridgeSize === size && styles.selectedOption]}
             onPress={() => setFridgeSize(size)}
           >
             <Text style={styles.optionText}>{size}</Text>
@@ -82,7 +112,7 @@ export default function CarbonCalculatorScreen() {
             Sua emissão estimada é de {totalCO2} kg de CO₂ por mês.
           </Text>
           <Text style={styles.resultText}>
-            Para compensar, você precisa plantar {calcularMudas()} mudas por mês.
+            Para compensar, você precisa plantar {calcularMudas()} mudas de árvores por mês.
           </Text>
         </View>
       )}

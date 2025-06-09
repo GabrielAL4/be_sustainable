@@ -299,4 +299,30 @@ router.get('/debug-passwords', async (req, res) => {
   }
 });
 
+router.get('/', async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'name', 'email', 'xp'],
+      include: [
+        {
+          model: Level,
+          attributes: ['name'],
+        }
+      ]
+    });
+
+    const formattedUsers = users.map(user => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      xp: user.xp,
+      level: (user as any).Level ? (user as any).Level.name : null
+    }));
+
+    res.json(formattedUsers);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar usuários', error });
+  }
+});
+
 export default router; 

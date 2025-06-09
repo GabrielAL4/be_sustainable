@@ -53,11 +53,6 @@ const CreateTaskScreen = ({ navigation }) => {
       const dailyTasks = existingTasks.filter(task => task.type === 'daily');
       const weeklyTasks = existingTasks.filter(task => task.type === 'weekly');
 
-      if (taskType === 'daily' && dailyTasks.length >= 4 && !editingTask) {
-        Alert.alert('Limite Atingido', 'Você já possui 4 tarefas diárias. Remova alguma tarefa antes de adicionar uma nova.');
-        return false;
-      }
-
       if (taskType === 'weekly' && weeklyTasks.length >= 1 && !editingTask) {
         Alert.alert('Limite Atingido', 'Você já possui uma tarefa semanal. Remova a tarefa existente antes de adicionar uma nova.');
         return false;

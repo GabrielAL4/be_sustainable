@@ -40,6 +40,8 @@ const ViewUserScreen = () => {
           <View key={user.id} style={styles.userItem}>
             <Text style={styles.userName}>{user.name}</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
+            <Text style={styles.userXp}>{user.xp}</Text>
+            <Text style={styles.userLevel}>{user.level}</Text>
           </View>
         ))
       )}
@@ -53,6 +55,8 @@ const styles = StyleSheet.create({
   userItem: { backgroundColor: '#fff', padding: 15, borderRadius: 10, marginBottom: 10 },
   userName: { fontSize: 18, fontWeight: 'bold' },
   userEmail: { fontSize: 14, color: '#666', marginTop: 5 },
+  userXp: { fontSize: 14, color: '#666', marginTop: 5 },
+  userLevel: { fontSize: 14, color: '#666', marginTop: 5 },
 });
 
 export default ViewUserScreen;

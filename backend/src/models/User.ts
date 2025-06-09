@@ -78,4 +78,6 @@ User.init(
   }
 );
 
+User.belongsTo(Level, { foreignKey: 'level_id' });
+
 export default User; 
