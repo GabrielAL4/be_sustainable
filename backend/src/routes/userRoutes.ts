@@ -6,6 +6,8 @@ import Level from '../models/Level';
 import Task from '../models/Task';
 import { sequelize } from '../config/database';
 import { Op } from 'sequelize';
+import UserTask from '../models/UserTask';
+import { ValidationError, UniqueConstraintError } from 'sequelize';
 
 const router = Router();
 
@@ -40,22 +42,28 @@ router.post('/create-admin', async (req, res) => {
 
 // Register user
 router.post('/register', async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const { name, email, password } = req.body;
     
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await User.findOne({ 
+      where: { email },
+      transaction 
+    });
+    
     if (existingUser) {
+      await transaction.rollback();
       return res.status(400).json({ message: 'User already exists' });
     }
 
     console.log('=== REGISTER DEBUG ===');
     console.log('Raw password received:', password);
     
-    // Hash password EXACTLY like admin creation - single hash only
     const hashedPassword = await bcrypt.hash(password, 10);
     console.log('Password hash:', hashedPassword);
 
-    // Create user directly without transaction to match admin creation
+    // Create user within transaction
     const user = await User.create({
       name,
       email,
@@ -63,24 +71,24 @@ router.post('/register', async (req, res) => {
       level_id: 1,
       points: 0,
       xp: 0
-    });
+    }, { transaction });
 
     // Get 4 random tasks for the user
     const randomTasks = await Task.findAll({
       where: { user_id: null },
       order: sequelize.literal('RANDOM()'),
-      limit: 4
+      limit: 4,
+      transaction
     });
 
-    // Create copies of the tasks for the user
+    // Create user tasks instead of copying tasks
     for (const task of randomTasks) {
-      await Task.create({
-        title: task.title,
-        description: task.description,
-        points: task.points,
+      await UserTask.create({
         user_id: user.id,
-        completed: false
-      });
+        task_id: task.id,
+        completed: false,
+        progress: 0
+      }, { transaction });
     }
 
     const token = jwt.sign(
@@ -99,10 +107,35 @@ router.post('/register', async (req, res) => {
       level_id: user.level_id
     };
 
+    // Commit the transaction
+    await transaction.commit();
+
     res.status(201).json({ user: userResponse, token });
-  } catch (error) {
+  } catch (error: unknown) {
+    // Rollback the transaction in case of error
+    await transaction.rollback();
+    
     console.error('Error in user registration:', error);
-    res.status(500).json({ message: 'Error creating user', error });
+    
+    // Verificar se é um erro de validação do Sequelize
+    if (error instanceof ValidationError) {
+      return res.status(400).json({ 
+        message: 'Dados inválidos',
+        errors: error.errors.map((e: ValidationError) => e.message)
+      });
+    }
+    
+    // Verificar se é um erro de chave única (email duplicado)
+    if (error instanceof UniqueConstraintError) {
+      return res.status(400).json({ 
+        message: 'Este email já está em uso'
+      });
+    }
+
+    res.status(500).json({ 
+      message: 'Erro ao criar usuário',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
   }
 });
 

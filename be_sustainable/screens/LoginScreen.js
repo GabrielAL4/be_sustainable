@@ -40,7 +40,7 @@ const LoginScreen = ({ navigation }) => {
         console.log('Tentando fazer login:', { email });
         response = await authAPI.login({ 
           email, 
-          password: password // Garantir que a senha está sendo enviada
+          password
         });
       }
 
@@ -69,15 +69,39 @@ const LoginScreen = ({ navigation }) => {
         config: {
           url: error.config?.url,
           method: error.config?.method,
-          baseURL: error.config?.baseURL,
-          data: error.config?.data // Log dos dados enviados
+          baseURL: error.config?.baseURL
         }
       });
 
-      Alert.alert(
-        "Erro",
-        error.response?.data?.message || "Erro ao processar sua solicitação. Tente novamente."
-      );
+      // Tratamento específico para diferentes tipos de erro
+      if (error.response?.status === 400) {
+        // Erro de validação ou dados inválidos
+        const errorMessage = error.response.data.message;
+        if (error.response.data.errors) {
+          // Se houver múltiplos erros de validação
+          Alert.alert(
+            "Dados Inválidos",
+            error.response.data.errors.join('\n')
+          );
+        } else {
+          Alert.alert("Erro", errorMessage);
+        }
+      } else if (error.response?.status === 409) {
+        // Conflito (ex: email já existe)
+        Alert.alert("Erro", "Este email já está em uso");
+      } else if (!error.response) {
+        // Erro de conexão
+        Alert.alert(
+          "Erro de Conexão",
+          "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente."
+        );
+      } else {
+        // Outros erros
+        Alert.alert(
+          "Erro",
+          "Ocorreu um erro inesperado. Por favor, tente novamente."
+        );
+      }
     } finally {
       setLoading(false);
     }
